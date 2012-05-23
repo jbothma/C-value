@@ -39,7 +39,7 @@ public class Demo {
 		AnnotationSet tokAnnots;
 		List<Annotation> tokAnnotList;
 		CValueSess cvals;
-		Collection<Candidate> cands;
+		ArrayList<Candidate> candList;
 
 		Gate.init();
 		cvals = new CValueSess();
@@ -67,10 +67,6 @@ public class Demo {
 		
 		inputAS = doc.getAnnotations(inputASName);
 		
-		System.out.println(doc.getAnnotationSetNames());
-		System.out.println(doc.getAnnotations(inputASName).getAllTypes());
-		System.out.println(doc.getAnnotations(inputASName).get(inputASType).size());
-		
 		phrasIter = inputAS.get(inputASType).iterator();
 		
 		while (phrasIter.hasNext()) {
@@ -81,16 +77,27 @@ public class Demo {
 			tokAnnotList = gate.Utils.inDocumentOrder(tokAnnots);
 			
 			for (Annotation tokAnnot : tokAnnotList) {
-				if (tokAnnotIsWord(tokAnnot))
-				{
+				if (tokAnnotIsWord(tokAnnot)) {
 					word = tokAnnotString(tokAnnot);
 					phrase += word + " ";
 				}
 			}
-			cvals.observe(phrase.toLowerCase());
+			cvals.observe(phrase.toLowerCase().trim());
 		}
 		
 		cvals.calculate();
+		
+		candList = new ArrayList<Candidate>(cvals.getCandidates());
+		Collections.sort(candList, new CValueComparator());
+		
+		for (Candidate cand : candList) {
+			System.out.println(
+					cand.getLength() + " " + 
+					cand.getFrequency() + "  " + 
+					cand.getNesterCount() + " " +
+					cand.getFreqNested() + " " +
+					cand.getString() + " " + cand.getCValue());
+		}
 	}
 	private static boolean tokAnnotIsWord(Annotation tokAnnot) {
 		return tokAnnot.getFeatures().get(ANNIEConstants.TOKEN_KIND_FEATURE_NAME).equals("word");

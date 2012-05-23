@@ -3,19 +3,15 @@ package uk.co.jbothma.terms;
 import java.util.ArrayList;
 import java.util.Collection;
 
-/**
- * Note: this class has a natural ordering that is inconsistent with equals.
- * 
- * @author jdb
- *
- */
-public class Candidate implements Comparable {
-	private int freq, len;
+public class Candidate {
+	private int freq, len, uniqNesters, freqNested;
 	private String string;
 
 	public Candidate(String string) {
 		this.string = string;
 		freq = 0;
+		freqNested = 0;
+		uniqNesters = 0;
 		len = string.split(" ").length;
 	}
 
@@ -39,8 +35,48 @@ public class Candidate implements Comparable {
 			}
 			substrings.add(substring.trim());
 		}
-		System.out.println();
-		return null;		
+		return substrings;		
+	}
+	
+	public double getCValue() {
+		double log_2_lenD = (Math.log((double)len)/Math.log((double)2));
+		double freqD = (double) freq;
+		double invUniqNestersD = 1D / (double) uniqNesters;
+		double freqNestedD = (double) freqNested;
+		
+		if (uniqNesters == 0) {
+			return log_2_lenD * freqD;
+		} else {
+			return log_2_lenD * (freqD - invUniqNestersD * freqNestedD);
+		}
+	}
+	
+	public int getFrequency() {
+		return freq;
+	}
+
+	public int getLength() {
+		return len;
+	}
+	
+	public int getNesterCount() {
+		return uniqNesters;
+	}
+	
+	public void observeNested() {
+		uniqNesters++;
+	}
+	
+	public int getFreqNested() {
+		return freqNested;
+	}
+	
+	public void incrementFreqNested(int freq) {
+		freqNested += freq;
+	}
+	
+	public String toString() {
+		return string;
 	}
 
 	private static ArrayList<ArrayList<Integer>> substrIdxs(int count) {
@@ -66,35 +102,5 @@ public class Candidate implements Comparable {
 			idxs.add(item);
 		}
 		return idxs;
-	}
-	
-	public int getFrequency() {
-		return freq;
-	}
-
-	public int getLength() {
-		return len;
-	}
-	
-	public String toString() {
-		return string;
-	}
-
-	@Override
-	public int compareTo(Object otherObj) {
-		Candidate other = (Candidate) otherObj;
-		if (this.len < other.getLength()) {
-			return -1;
-		} else if (this.len == other.getLength()) {
-			if (this.freq < other.freq) {
-				return -1;
-			} else if (this.freq == other.getFrequency()) {
-				return 0;
-			} else {
-				return 1;
-			}
-		} else {
-			return 1;
-		}
 	}
 }

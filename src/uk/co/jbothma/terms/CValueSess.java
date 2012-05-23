@@ -6,6 +6,28 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 
+/**
+ * C-Value session.
+ * 
+ * Usage:
+ * 
+ * cvalSess = new CValueSess();
+ * 
+ * for (String filterMatch : corpus.filter()) {
+ *     cvalSess.observe(filterMatch);
+ * }
+ * 
+ * cvalSess.calculate();
+ * 
+ * Now there's a collection of Candidate instances with C-Value ready.
+ * 
+ * candList = new ArrayList<Candidate>(cvalSess.getCandidates());
+ * Collections.sort(candList, new CValueComparator());
+ * 
+ * for (Candidate cand : candList) {
+ *     System.out.println(cand.getString() + " " + cand.getCValue());
+ * }
+ */
 public class CValueSess {
 	private HashMap<String, Candidate> candidates;
 	
@@ -29,11 +51,18 @@ public class CValueSess {
 	public void calculate() {
 		Collection<Candidate> cands = this.getCandidates();
 		List<Candidate> candList = new ArrayList<Candidate>(cands);
-		Collections.sort(candList);
+		Collections.sort(candList, new CValueLenFreqComparator());
 		Collections.reverse(candList);
+		Candidate hit;
+
 		for (Candidate cand : candList) {
-			System.out.println(cand.getLength() + " " + cand.getFrequency() + "  " + cand.getString());
-			cand.getSubstrings();
+			Collection<String> substrings = cand.getSubstrings();
+			for (String substr : substrings) {
+				if ((hit = candidates.get(substr)) != null) {
+					hit.observeNested();
+					hit.incrementFreqNested(cand.getFrequency());
+				}
+			}
 		}
 	}
 }
