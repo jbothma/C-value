@@ -1,6 +1,10 @@
 package uk.co.jbothma.terms;
 
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Iterator;
@@ -12,6 +16,7 @@ import gate.DataStore;
 import gate.Factory;
 import gate.FeatureMap;
 import gate.Gate;
+import gate.Utils;
 import gate.creole.ANNIEConstants;
 import gate.creole.ResourceInstantiationException;
 import gate.persist.PersistenceException;
@@ -20,26 +25,30 @@ import gate.util.GateException;
 import gate.util.Out;
 
 public class Demo {
-	private static final String dataStorePath = "/home/jdb/workspace/SweSPARKGATEPR/demo/ManskligaRattigheter/";
+	private static final String dataStorePath = "/home/jdb/thesis/results/jrc2006_korp_big";
+	private static final String outfilePath = "/home/jdb/thesis/results/CValueDemo.txt";
 	
 	/**
 	 * @param args
 	 * @throws GateException 
+	 * @throws IOException 
 	 */
-	public static void main(String[] args) throws GateException {
+	public static void main(String[] args) throws GateException, IOException {
 		SerialDataStore dataStore;
-		Object docID;
+		//Object docID;
 		FeatureMap docFeatures;
 		Iterator<Annotation> phrasIter;
 		AnnotationSet inputAS;
 		String inputASName, inputASType;
 		gate.Document doc;
-		String phrase, word;
+		String phrase, lemma;
 		Annotation phrasAnnot;
 		AnnotationSet tokAnnots;
 		List<Annotation> tokAnnotList;
 		CValueSess cvals;
 		ArrayList<Candidate> candList;
+		FileWriter fstream = new FileWriter(outfilePath);
+		BufferedWriter out = new BufferedWriter(fstream);
 
 		Gate.init();
 		cvals = new CValueSess();
@@ -50,39 +59,47 @@ public class Demo {
 		dataStore.open();
 		Out.prln("serial datastore opened...");
 		
+		int docCount = dataStore.getLrIds("gate.corpora.DocumentImpl").size();
+		int docIdx = 0;
+		
 		// get the corpus
-		docID = dataStore.getLrIds("gate.corpora.DocumentImpl").get(0);
-		docFeatures = Factory.newFeatureMap();
-		docFeatures.put(DataStore.LR_ID_FEATURE_NAME, docID);
-		docFeatures.put(DataStore.DATASTORE_FEATURE_NAME, dataStore);
-		
-		//tell the factory to load the Serial Corpus with the specified ID from the specified  datastore
-		doc = (gate.Document)
-				Factory.createResource("gate.corpora.DocumentImpl", docFeatures);
-		System.out.println("Demo: got the document.");
-		System.out.println(doc.getAnnotationSetNames());
-		
-		inputASName = "OntPreprocess";
-		inputASType = "NounPhrase";
-		
-		inputAS = doc.getAnnotations(inputASName);
-		
-		phrasIter = inputAS.get(inputASType).iterator();
-		
-		while (phrasIter.hasNext()) {
-			phrase = "";
-			phrasAnnot = (Annotation) phrasIter.next();
-			tokAnnots = gate.Utils.getContainedAnnotations(
-					inputAS, phrasAnnot, ANNIEConstants.TOKEN_ANNOTATION_TYPE);
-			tokAnnotList = gate.Utils.inDocumentOrder(tokAnnots);
+		for (Object docID : dataStore.getLrIds("gate.corpora.DocumentImpl")) {
+			docFeatures = Factory.newFeatureMap();
+			docFeatures.put(DataStore.LR_ID_FEATURE_NAME, docID);
+			docFeatures.put(DataStore.DATASTORE_FEATURE_NAME, dataStore);
 			
-			for (Annotation tokAnnot : tokAnnotList) {
-				if (tokAnnotIsWord(tokAnnot)) {
-					word = tokAnnotString(tokAnnot);
-					phrase += word + " ";
+			//tell the factory to load the Serial Corpus with the specified ID from the specified  datastore
+			doc = (gate.Document)
+					Factory.createResource("gate.corpora.DocumentImpl", docFeatures);
+			
+			System.out.println("Doc " + (++docIdx) + " / " + docCount + " : " + doc.getName());
+			
+			inputASName = "Original markups";
+			inputASType = "TermCandidate";
+			
+			inputAS = doc.getAnnotations(inputASName);
+			
+			phrasIter = inputAS.get(inputASType).iterator();
+			
+			while (phrasIter.hasNext()) {
+				phrase = "";
+				phrasAnnot = (Annotation) phrasIter.next();
+				tokAnnots = gate.Utils.getContainedAnnotations(
+						inputAS, phrasAnnot, "w");
+				tokAnnotList = gate.Utils.inDocumentOrder(tokAnnots);
+				
+				for (Annotation tokAnnot : tokAnnotList) {
+					lemma = tokenLemma(doc, tokAnnot);
+					// TODO: this is a corpus-specific hack and should be fixed in preprocessing or
+					// made customizable for the corpus. Also, it should rather be if the string matches ^|$
+					// so that strings that contain characters without whitespace are accepted.
+					if (!lemma.contains("|"))
+						phrase += lemma + " ";
 				}
+				cvals.observe(phrase.toLowerCase().trim());
 			}
-			cvals.observe(phrase.toLowerCase().trim());
+
+			Factory.deleteResource(doc);
 		}
 		
 		cvals.calculate();
@@ -91,13 +108,42 @@ public class Demo {
 		Collections.sort(candList, new CValueComparator());
 		
 		for (Candidate cand : candList) {
-			System.out.println(
+			String resultLine = 
 					cand.getLength() + " " + 
 					cand.getFrequency() + "  " + 
 					cand.getNesterCount() + " " +
 					cand.getFreqNested() + " " +
-					cand.getString() + " " + cand.getCValue());
+					cand.getString() + " " +
+					cand.getCValue();
+			//System.out.println(resultLine);
+			out.write(resultLine + "\n");
 		}
+		
+		out.close();
+	}
+	
+	private static String tokenLemma(gate.Document doc, Annotation tokAnnot) {
+		String lemma;
+		String[] lemmas;
+		String lemmaAnnotStr = (String)tokAnnot.getFeatures().get("lemma");
+		if (lemmaAnnotStr != null) {
+			lemmas = lemmaAnnotStr.split("\\|");
+			if (lemmas.length > 1) {
+				lemma = lemmas[1];
+				if (!lemma.equals("")) {
+//					if (lemma.contains("|")) {
+//						System.out.println("lemma \"" + lemma + "\"");
+//					}
+					return lemma;
+				}
+			}
+		}
+		// fall back to raw string
+		lemma = Utils.stringFor(doc, tokAnnot).toLowerCase();
+//		if (lemma.contains("|")) {
+//			System.out.println("raw \"" + lemma + "\"");
+//		}
+		return lemma;
 	}
 	private static boolean tokAnnotIsWord(Annotation tokAnnot) {
 		return tokAnnot.getFeatures().get(ANNIEConstants.TOKEN_KIND_FEATURE_NAME).equals("word");
