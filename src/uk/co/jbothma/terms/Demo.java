@@ -1,15 +1,5 @@
 package uk.co.jbothma.terms;
 
-import java.io.BufferedWriter;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
-
 import gate.Annotation;
 import gate.AnnotationSet;
 import gate.DataStore;
@@ -17,12 +7,17 @@ import gate.Factory;
 import gate.FeatureMap;
 import gate.Gate;
 import gate.Utils;
-import gate.creole.ANNIEConstants;
-import gate.creole.ResourceInstantiationException;
-import gate.persist.PersistenceException;
 import gate.persist.SerialDataStore;
 import gate.util.GateException;
 import gate.util.Out;
+
+import java.io.BufferedWriter;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Iterator;
+import java.util.List;
 
 public class Demo {
 	private static final String dataStorePath = "/home/jdb/thesis/results/jrc2006_korp_big";
@@ -144,12 +139,5 @@ public class Demo {
 //			System.out.println("raw \"" + lemma + "\"");
 //		}
 		return lemma;
-	}
-	private static boolean tokAnnotIsWord(Annotation tokAnnot) {
-		return tokAnnot.getFeatures().get(ANNIEConstants.TOKEN_KIND_FEATURE_NAME).equals("word");
-	}
-	
-	private static String tokAnnotString(Annotation tokAnnot) {
-		return (String) tokAnnot.getFeatures().get(ANNIEConstants.TOKEN_STRING_FEATURE_NAME);
 	}
 }
