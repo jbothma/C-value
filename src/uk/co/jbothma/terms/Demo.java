@@ -9,8 +9,6 @@ import java.util.Collections;
 public class Demo {
 	/**
 	 * @param args
-	 * @throws GateException 
-	 * @throws IOException 
 	 */
 	public static void main(String[] args) {
 		String[] phrases = {
