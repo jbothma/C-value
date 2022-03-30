@@ -1,4 +1,4 @@
-This implements the C-value term extraction method. I don't expect to implement the NV-value part in the foreseeable future. 
+This implements the C-value term extraction method. I don't expect to implement the NC-value part in the foreseeable future. 
 
 I think the C-value works correctly but I don't have unit tests.
 
